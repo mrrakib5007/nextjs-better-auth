@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "@/lib/auth-client";
 
 export default function Navbar() {
-  // No icon library installation need 
   const [isOpen, setIsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { data, isPending } = useSession();
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +35,13 @@ export default function Navbar() {
       return pathname === "/";
     }
     return pathname.startsWith(href);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsProfileOpen(false);
+    setIsOpen(false);
+    router.push("/login");
   };
 
   return (
@@ -82,18 +92,78 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden flex-1 md:flex md:items-center md:justify-end md:gap-3">
-            <Link
-              href="/login"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-            >
-              Sign up
-            </Link>
+            {isPending ? (
+              <div className="h-9 w-24 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+            ) : data?.user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+                    {data.user.name?.charAt(0).toUpperCase() || "U"}
+                  </span>
+                  <span className="max-w-32 truncate">{data.user.name}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`h-4 w-4 transition-transform ${isProfileOpen ? "rotate-180" : ""}`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Signed in as</p>
+                      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{data.user.email}</p>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        className="h-4 w-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                        />
+                      </svg>
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="flex md:hidden">
@@ -207,21 +277,47 @@ export default function Navbar() {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-2.5 border-t border-zinc-200 pt-5 dark:border-zinc-800">
-          <Link
-            href="/login"
-            onClick={() => setIsOpen(false)}
-            className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/signup"
-            onClick={() => setIsOpen(false)}
-            className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
-          >
-            Sign up
-          </Link>
+        <div className="border-t border-zinc-200 pt-5 dark:border-zinc-800">
+          {data?.user ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+                  {data.user.name?.charAt(0).toUpperCase() || "U"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {data.user.name}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {data.user.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:bg-red-500 active:scale-98"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                onClick={() => setIsOpen(false)}
+                className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+              >
+                Sign up
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -10,16 +12,18 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+    if (errors[name] || errors.global) {
+      setErrors((prev) => ({ ...prev, [name]: "", global: "" }));
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -35,9 +39,22 @@ export default function LoginPage() {
       return;
     }
 
+    setLoading(true);
     setErrors({});
-    console.log(formData);
-    alert("Login successful!");
+
+    const { error } = await authClient.signIn.email({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (error) {
+      setErrors({ global: error.message || "Invalid credentials" });
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
+    router.push("/");
   };
 
   return (
@@ -69,6 +86,12 @@ export default function LoginPage() {
             Enter your credentials to access your account
           </p>
         </div>
+
+        {errors.global && (
+          <div className="mt-6 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
+            {errors.global}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
           <div>
@@ -168,9 +191,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-98 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            disabled={loading}
+            className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-98 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Log in
+            {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
